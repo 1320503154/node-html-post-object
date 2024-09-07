@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <title>OSS web直传</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+  <h2>OSS web直传---在服务端用Node.js签名</h2>
+  <ol>
+    <li>
+      Bucket必须设置跨域，且允许Methods必须选中POST，否则无法执行表单上传。
+    </li>
+  </ol>
+  <br />
+  <div>
+    <input type="file" id="fileInput" name="fileInput" />
+    <input type="button" value="开始上传" onclick="upload()" />
+  </div>
+  <script>
+
+    function upload() {
+      const tokenUrl = "http://127.0.0.1:3001/token";
+      fetch(tokenUrl).then(async (res) => {
+        const { policy, signature, accessid, host, dir, stsToken } =
+          await res.json();
+
+        let formData = new FormData();
+        formData.append("success_action_status", "200");
+        formData.append("policy", policy);
+        formData.append("signature", signature);
+        formData.append("OSSAccessKeyId", accessid);
+        if (stsToken) formData.append("x-oss-security-token", stsToken);
+
+        const files = document.getElementById("fileInput").files;
+        if (files.length === 0) {
+          alert("请选择文件");
+          return;
+        }
+        const fileName = dir + files[0].name;
+        formData.append("key", fileName);
+        formData.append("file", files[0]);
+
+        const param = {
+          method: "POST",
+          body: formData,
+        };
+        fetch(host, param)
+          .then((data) => {
+            console.log(data);
+            // Construct and log the file URL
+            const fileUrl = `${host}/${fileName}`;
+            console.log("Uploaded file URL:", fileUrl);
+            alert(`上传成功，文件URL: ${fileUrl}`);
+            //新建一个图片元素
+            //然后将图片元素的src属性设置为上传成功后的图片地址
+            //使用JQuery的append方法将图片元素添加到页面中
+            const img = $("<img>").attr("src", fileUrl);
+            $("body").append(img);
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      });
+    }
+  </script>
+</body>
+
+</html>
